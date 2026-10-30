@@ -52,7 +52,7 @@ test('add two products to cart', async ({ page }) => {
   await login(page, 'standard_user', 'secret_sauce');
 
   await page
-    .locator('[data-test="add-to-cart-sauce-labs-backpack"]')
+    .locator('[data-test="add-to-cart-"]')
     .click();
   await page
     .locator('[data-test="add-to-cart-sauce-labs-bike-light"]')
