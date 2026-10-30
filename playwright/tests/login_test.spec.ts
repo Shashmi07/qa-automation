@@ -1,8 +1,9 @@
 import {test} from '@playwright/test';
-import {LoginPage} from '../pages/loginpage';
+import {LoginPage} from '../pages/LoginPage';
 import {InventoryPage} from '../pages/inventorypage';
 import {CartPage} from '../pages/cartpage';
 import {CheckoutPage} from '../pages/checkoutpage';
+import testData from '../test-data/testData.json';
 
 test('Complete Sauce Demo purchase', async ({ page }) => {
 
@@ -14,7 +15,10 @@ test('Complete Sauce Demo purchase', async ({ page }) => {
     //Login
 
     await loginPage.gotoLoginPage();
-    await loginPage.login('standard_user', 'secret_sauce');
+    await loginPage.login(
+        testData.users.standard.username,
+        testData.users.standard.password
+    );
     await loginPage.verifyLoginSuccess();
 
     //Add product to cart

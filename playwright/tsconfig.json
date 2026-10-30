@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "types": ["node", "@playwright/test"]
+  },
+  "include": ["fixtures/**/*.ts", "pages/**/*.ts", "tests/**/*.ts"]
+}
