@@ -1,4 +1,15 @@
-describe('Sauce Demo - Cypress Tests', () => {
+
+import LoginPage from '../../pages/LoginPage';
+import InventoryPage from '../../pages/InventoryPage';
+import CartPage from '../../pages/CartPage';
+import CheckoutPage from '../../pages/CheckoutPage';
+
+describe('Sauce Demo - Page Object Model', () => {
+
+  const loginPage = new LoginPage();
+  const inventoryPage = new InventoryPage();
+  const cartPage = new CartPage();
+  const checkoutPage = new CheckoutPage();
 
   let users;
 
@@ -11,174 +22,103 @@ describe('Sauce Demo - Cypress Tests', () => {
 
   // Runs before every test
   beforeEach(() => {
-    cy.visit('/');
+    cy.clearCookies();
+    cy.clearLocalStorage();
   });
 
   // Test 1: Valid Login
-  it('should login successfully with valid credentials', () => {
+  it('should login successfully', () => {
 
-    cy.get('[data-test="username"]')
-      .type(users.standardUser.username);
-
-    cy.get('[data-test="password"]')
-      .type(users.standardUser.password);
-
-    cy.get('[data-test="login-button"]').click();
+    cy.login(
+      users.standardUser.username,
+      users.standardUser.password
+    );
 
     cy.url().should('include', '/inventory.html');
-
-    cy.get('.inventory_list')
-      .should('be.visible');
-
-    cy.get('.inventory_item').then(($items) => {
-      expect($items).to.have.length(6);
-    });
-
   });
-
 
   // Test 2: Locked Out User
-  it('should show an error for locked out user', () => {
+  it('should reject locked out user', () => {
 
-    cy.get('[data-test="username"]')
-      .type(users.lockedUser.username);
+    cy.login(
+      users.lockedUser.username,
+      users.lockedUser.password
+    );
 
-    cy.get('[data-test="password"]')
-      .type(users.lockedUser.password);
-
-    cy.get('[data-test="login-button"]').click();
-
-    cy.get('[data-test="error"]')
-      .should('be.visible')
-      .and('contain.text', 'locked out');
-
+    loginPage.verifyError();
   });
-
 
   // Test 3: Wrong Password
-  it('should show an error for incorrect password', () => {
+  it('should reject incorrect password', () => {
 
-    cy.get('[data-test="username"]')
-      .type(users.invalidUser.username);
+    cy.login(
+      users.invalidUser.username,
+      users.invalidUser.password
+    );
 
-    cy.get('[data-test="password"]')
-      .type(users.invalidUser.password);
-
-    cy.get('[data-test="login-button"]').click();
-
-    cy.get('[data-test="error"]')
-      .should('be.visible');
-
-    cy.get('[data-test="error"]').then(($error) => {
-      expect($error.text()).to.contain('Username and password');
-    });
-
+    loginPage.verifyError();
   });
-
 
   // Test 4: Add Two Products
-  it('should add two products to the cart', () => {
+  it('should add two products to cart', () => {
 
-    cy.get('[data-test="username"]')
-      .type(users.standardUser.username);
+    cy.login(
+      users.standardUser.username,
+      users.standardUser.password
+    );
 
-    cy.get('[data-test="password"]')
-      .type(users.standardUser.password);
+    inventoryPage.addBackpack();
+    inventoryPage.addBikeLight();
 
-    cy.get('[data-test="login-button"]').click();
+    inventoryPage.verifyCartCount(2);
+    inventoryPage.openCart();
 
-    cy.get('[data-test="add-to-cart-sauce-labs-backpack"]')
-      .click();
-
-    cy.get('[data-test="add-to-cart-sauce-labs-bike-light"]')
-      .click();
-
-    cy.get('.shopping_cart_badge')
-      .should('have.text', '2');
-
-    cy.get('.shopping_cart_link').click();
-
-    cy.contains('Sauce Labs Backpack')
-      .should('be.visible');
-
-    cy.contains('Sauce Labs Bike Light')
-      .should('be.visible');
-
+    cartPage.verifyProduct('Sauce Labs Backpack');
+    cartPage.verifyProduct('Sauce Labs Bike Light');
   });
 
+  // Test 5: Remove Product
+  it('should remove a product from cart', () => {
 
-  // Test 5: Remove a Product
-  it('should remove a product from the cart', () => {
+    cy.login(
+      users.standardUser.username,
+      users.standardUser.password
+    );
 
-    cy.get('[data-test="username"]')
-      .type(users.standardUser.username);
+    inventoryPage.addBackpack();
+    inventoryPage.addBikeLight();
+    inventoryPage.openCart();
 
-    cy.get('[data-test="password"]')
-      .type(users.standardUser.password);
+    cartPage.removeBackpack();
 
-    cy.get('[data-test="login-button"]').click();
-
-    cy.get('[data-test="add-to-cart-sauce-labs-backpack"]')
-      .click();
-
-    cy.get('[data-test="add-to-cart-sauce-labs-bike-light"]')
-      .click();
-
-    cy.get('.shopping_cart_link').click();
-
-    cy.get('[data-test="remove-sauce-labs-backpack"]')
-      .click();
-
-    cy.contains('Sauce Labs Backpack')
-      .should('not.exist');
-
-    cy.contains('Sauce Labs Bike Light')
-      .should('be.visible');
-
-    cy.get('.cart_item').should('have.length', 1);
-
+    cartPage.verifyBackpackRemoved();
+    cartPage.verifyProduct('Sauce Labs Bike Light');
+    cartPage.verifyCartItems(1);
   });
-
 
   // Test 6: Complete Checkout
-  it('should complete the checkout process', () => {
+  it('should complete checkout successfully', () => {
 
-    cy.get('[data-test="username"]')
-      .type(users.standardUser.username);
+    cy.login(
+      users.standardUser.username,
+      users.standardUser.password
+    );
 
-    cy.get('[data-test="password"]')
-      .type(users.standardUser.password);
+    inventoryPage.addBackpack();
+    inventoryPage.openCart();
 
-    cy.get('[data-test="login-button"]').click();
+    cartPage.checkout();
 
-    cy.get('[data-test="add-to-cart-sauce-labs-backpack"]')
-      .click();
+    checkoutPage.enterDetails(
+      'Test',
+      'User',
+      '10000'
+    );
 
-    cy.get('.shopping_cart_link').click();
+    checkoutPage.continue();
+    checkoutPage.finish();
 
-    cy.get('[data-test="checkout"]').click();
-
-    cy.get('[data-test="firstName"]')
-      .type('Test');
-
-    cy.get('[data-test="lastName"]')
-      .type('User');
-
-    cy.get('[data-test="postalCode"]')
-      .type('10000');
-
-    cy.get('[data-test="continue"]').click();
-
-    cy.get('[data-test="finish"]').click();
-
-    cy.get('[data-test="complete-header"]')
-      .should('be.visible')
-      .and('have.text', 'Thank you for your order!');
-
-    cy.get('[data-test="complete-header"]').then(($header) => {
-      expect($header.text()).to.equal('Thank you for your order!');
-    });
-
+    checkoutPage.verifyOrderComplete();
   });
 
 });
