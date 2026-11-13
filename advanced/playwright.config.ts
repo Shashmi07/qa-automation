@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const skipWebServer = process.env.PW_SKIP_WEBSERVER === "1";
+
 export default defineConfig({
   testDir: "./tests",
 
@@ -46,9 +48,11 @@ export default defineConfig({
     }
   ],
 
-  webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: true
-  }
+  webServer: skipWebServer
+    ? undefined
+    : {
+        command: "npm run dev",
+        url: "http://localhost:3000",
+        reuseExistingServer: true
+      }
 });
