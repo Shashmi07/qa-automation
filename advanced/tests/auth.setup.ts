@@ -1,47 +1,79 @@
-import { test as setup, expect } from '@playwright/test';
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import { test as setup, expect, type Page } from "@playwright/test";
+import fs from "node:fs";
 
-const authDir = path.resolve(__dirname, '..', '.auth');
-const sauceUrl = 'https://www.saucedemo.com/';
-const crmUrl = process.env.CRM_BASE_URL ?? 'http://localhost:3000';
+const authDirectory = "playwright/.auth";
+const sauceAuthFile = `${authDirectory}/sauce-user.json`;
 
-async function login(page: import('@playwright/test').Page, url: string, username: string, password: string) {
-  await page.goto(url);
-  await page.getByLabel(/user(name)?|email address/i).fill(username);
-  await page.getByRole('textbox', { name: /password/i }).fill(password);
-  await page.getByRole('button', { name: /log[ -]?in|sign[ -]?in/i }).click();
+async function loginAndSave(
+  page: Page,
+  email: string,
+  password: string,
+  authFile: string
+) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await page.goto("/login");
+    await page.getByLabel("Email address").fill(email);
+    await page.getByRole("textbox", { name: "Password" }).fill(password);
+    await page.getByRole("button", { name: "Sign In" }).click();
+
+    try {
+      await expect(page).not.toHaveURL(/\/login/);
+      break;
+    } catch (error) {
+      if (attempt === 1) {
+        throw error;
+      }
+    }
+  }
+
+  await page.context().storageState({ path: authFile });
 }
 
-setup('authenticate Sauce Demo user', async ({ page }) => {
-  await fs.mkdir(authDir, { recursive: true });
-  await login(page, sauceUrl, 'standard_user', 'secret_sauce');
-  await expect(page).toHaveURL(/inventory\.html/);
-  await page.context().storageState({ path: path.join(authDir, 'sauce-user.json') });
+setup("save superadmin state", async ({ browser }) => {
+  fs.mkdirSync(authDirectory, { recursive: true });
+
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  await loginAndSave(
+    page,
+    process.env.SUPERADMIN_EMAIL ?? "superadmin@doclink.com",
+    process.env.SUPERADMIN_PASSWORD ?? "SuperAdmin@123",
+    `${authDirectory}/superadmin.json`
+  );
+
+  await context.close();
 });
 
-setup('authenticate CRM superadmin and admin', async ({ browser }) => {
-  setup.skip(!process.env.CRM_BASE_URL, 'Set CRM_BASE_URL to authenticate the CRM test copy');
+setup("save admin state", async ({ browser }) => {
+  fs.mkdirSync(authDirectory, { recursive: true });
 
-  const credentials = [
-    {
-      name: 'crm-superadmin.json',
-      username: process.env.CRM_SUPERADMIN_USERNAME ?? 'superadmin@doclink.com',
-      password: process.env.CRM_SUPERADMIN_PASSWORD ?? 'SuperAdmin@123',
-    },
-    {
-      name: 'crm-admin.json',
-      username: process.env.CRM_ADMIN_USERNAME ?? 'admin@doclink.com',
-      password: process.env.CRM_ADMIN_PASSWORD ?? '#q2rCRg7!eWsTL',
-    },
-  ];
+  const context = await browser.newContext();
+  const page = await context.newPage();
 
-  for (const account of credentials) {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await login(page, crmUrl, account.username, account.password);
-    await expect(page).toHaveURL(/\/dashboard/);
-    await context.storageState({ path: path.join(authDir, account.name) });
-    await context.close();
-  }
+  await loginAndSave(
+    page,
+    process.env.ADMIN_EMAIL ?? "admin@doclink.com",
+    process.env.ADMIN_PASSWORD ?? "#q2rCRg7!eWsTL",
+    `${authDirectory}/admin.json`
+  );
+
+  await context.close();
+});
+
+setup("authenticate Sauce Demo user", async ({ page }) => {
+  fs.mkdirSync(authDirectory, { recursive: true });
+
+  await page.goto("https://www.saucedemo.com/");
+
+  await page
+    .getByRole("textbox", { name: /username/i })
+    .fill(process.env.SAUCE_USERNAME ?? "standard_user");
+  await page
+    .getByRole("textbox", { name: /password/i })
+    .fill(process.env.SAUCE_PASSWORD ?? "secret_sauce");
+  await page.getByRole("button", { name: /login/i }).click();
+
+  await expect(page).toHaveURL(/inventory\.html/);
+  await page.context().storageState({ path: sauceAuthFile });
 });

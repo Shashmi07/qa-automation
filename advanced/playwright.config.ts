@@ -1,47 +1,54 @@
-import { defineConfig, devices } from '@playwright/test';
-import path from 'node:path';
-
-const authDir = path.resolve(__dirname, '.auth');
-const crmProjects = process.env.CRM_BASE_URL
-  ? [
-      {
-        name: 'crm-superadmin',
-        testMatch: /crm-auth\.spec\.ts/,
-        dependencies: ['setup'],
-        use: { ...devices['Desktop Chrome'], storageState: path.join(authDir, 'crm-superadmin.json') },
-      },
-      {
-        name: 'crm-admin',
-        testMatch: /crm-auth\.spec\.ts/,
-        dependencies: ['setup'],
-        use: { ...devices['Desktop Chrome'], storageState: path.join(authDir, 'crm-admin.json') },
-      },
-    ]
-  : [];
+import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
-  testDir: './tests',
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  reporter: [['list'], ['html', { outputFolder: 'playwright-report' }]],
+  testDir: "./tests",
+
+  reporter: [
+    ["list"],
+    ["html", { outputFolder: "playwright-report", open: "never" }],
+    ["json", { outputFile: "test-results/results.json" }]
+  ],
+
   use: {
-    headless: true,
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    baseURL: "http://localhost:3000",
+    storageState: "playwright/.auth/user.json",
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure"
   },
+
   projects: [
     {
-      name: 'setup',
-      testMatch: /.*\.setup\.ts/,
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
+      use: {
+        storageState: {
+          cookies: [],
+          origins: []
+        }
+      }
     },
     {
-      name: 'chromium',
-      testMatch: /sauce-demo\.spec\.ts/,
-      dependencies: ['setup'],
-      use: { ...devices['Desktop Chrome'], storageState: path.join(authDir, 'sauce-user.json') },
+      name: "chromium",
+      dependencies: ["setup"],
+      testIgnore: /sauce-demo\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"]
+      }
     },
-    ...crmProjects,
+    {
+      name: "sauce",
+      testMatch: /sauce-demo\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/sauce-user.json"
+      }
+    }
   ],
+
+  webServer: {
+    command: "npm run dev",
+    url: "http://localhost:3000",
+    reuseExistingServer: true
+  }
 });

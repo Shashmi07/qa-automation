@@ -1,0 +1,12 @@
+[
+  {
+    "name": "A",
+    "email": "m1.minimum@example.com",
+    "phone": "+94 71 0000000"
+  },
+  {
+    "name": "Boundary Lead 123456789012345678901234567890",
+    "email": "m1.maximum@example.com",
+    "phone": "+94 77 1234567"
+  }
+]
