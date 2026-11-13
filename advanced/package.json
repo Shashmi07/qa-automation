@@ -8,6 +8,7 @@
     "test:timed": "powershell -NoProfile -Command \"$start = Get-Date; npx playwright test --project=setup --project=chromium; $exit = $LASTEXITCODE; $elapsed = ((Get-Date) - $start).TotalSeconds; Write-Host ('Elapsed seconds: ' + [math]::Round($elapsed, 2)); exit $exit\""
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@faker-js/faker": "^10.6.0",
     "@playwright/test": "^1.65.0",
     "@types/node": "^26.6.6"
